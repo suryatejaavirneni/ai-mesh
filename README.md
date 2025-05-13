@@ -531,3 +531,179 @@ flowchart TB
 
 <img width="1039" alt="image" src="https://github.com/user-attachments/assets/f4c85867-355a-4f9f-b1e0-4910c29cfd34" />
 
+## diagram final
+
+```
+flowchart TB
+    classDef user fill:#FFEBEE,stroke:#C62828,color:#B71C1C,rounded
+    classDef hostai fill:#E1F5FE,stroke:#0288D1,color:#01579B,rounded
+    classDef agent fill:#B3E5FC,stroke:#0288D1,color:#01579B,rounded
+    classDef gateway fill:#FFF3E0,stroke:#E65100,color:#E65100,rounded
+    classDef mcp fill:#E1BEE7,stroke:#8E24AA,color:#4A148C,rounded
+    classDef token fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,rounded
+    classDef svid fill:#D1C4E9,stroke:#673AB7,color:#311B92,rounded
+    classDef rar fill:#E8F5E9,stroke:#388E3C,color:#1B5E20,rounded
+    
+    User(["User"]):::user
+    
+    subgraph HostLayer["Host AI Layer"]
+        HostAI["Travel Planner"]:::hostai
+        HostSVID["SPIFFE ID:<br>spiffe://example.org/workload/host-ai"]:::svid
+    end
+    
+    subgraph SpecialistLayer["Specialist Agent Layer"]
+        direction LR
+        Flight["Flight Agent"]:::agent
+        Hotel["Hotel Agent"]:::agent
+        Food["Food Agent"]:::agent
+        
+        FlightSVID["SPIFFE ID:<br>spiffe://example.org/workload/flight-agent"]:::svid
+        HotelSVID["SPIFFE ID:<br>spiffe://example.org/workload/hotel-agent"]:::svid
+        FoodSVID["SPIFFE ID:<br>spiffe://example.org/workload/food-agent"]:::svid
+        
+        FlightRAR["Flight RAR:<br>{type: 'flight_only',<br>constraints: {budget: '$1500'}}"]:::rar
+        HotelRAR["Hotel RAR:<br>{type: 'hotel_only',<br>constraints: {budget: '$1000'}}"]:::rar
+        FoodRAR["Food RAR:<br>{type: 'food_only',<br>constraints: {dietary: 'no_shellfish'}}"]:::rar
+        
+        FlightToken["Transaction Token:<br>SPIFFE ID + Agent Chain + Flight RAR"]:::token
+        HotelToken["Transaction Token:<br>SPIFFE ID + Agent Chain + Hotel RAR"]:::token
+        FoodToken["Transaction Token:<br>SPIFFE ID + Agent Chain + Food RAR"]:::token
+    end
+    
+    subgraph GatewayLayer["Gateway Layer"]
+        Gateway["MCP Gateway<br>with Policy Engine"]:::gateway
+    end
+    
+    subgraph MCPLayer["MCP Services Layer"]
+        direction LR
+        FlightMCP["Flight MCP"]:::mcp
+        HotelMCP["Hotel MCP"]:::mcp
+        FoodMCP["Food MCP"]:::mcp
+    end
+    
+    User --"1. Request with<br>constraints"--> HostLayer
+    
+    HostLayer --"2. Create specialists<br>with appropriate RARs"--> SpecialistLayer
+    
+    Flight --- FlightSVID
+    Hotel --- HotelSVID
+    Food --- FoodSVID
+    
+    FlightSVID --- FlightToken
+    HotelSVID --- HotelToken
+    FoodSVID --- FoodToken
+    
+    FlightRAR --- FlightToken
+    HotelRAR --- HotelToken
+    FoodRAR --- FoodToken
+    
+    SpecialistLayer --"3. Request with<br>Transaction Tokens"--> GatewayLayer
+    
+    GatewayLayer --"4. Policy-validated<br>access"--> MCPLayer
+    
+    MCPLayer --"5. Constrained<br>results"--> GatewayLayer
+    
+    GatewayLayer --"6. Verified<br>results"--> SpecialistLayer
+    
+    SpecialistLayer --"7. Coordinated<br>results"--> HostLayer
+    
+    HostLayer --"8. Final plan<br>with guarantees"--> User
+```
+
+<img width="885" alt="image" src="https://github.com/user-attachments/assets/ac5b8f00-4e45-4e71-a58e-c2a97e557d9e" />
+
+
+## diagram 11
+
+
+```
+flowchart TB
+    classDef user fill:#FFEBEE,stroke:#C62828,color:#B71C1C,rounded
+    classDef hostai fill:#E1F5FE,stroke:#0288D1,color:#01579B,rounded
+    classDef agent fill:#B3E5FC,stroke:#0288D1,color:#01579B,rounded
+    classDef gateway fill:#FFF3E0,stroke:#E65100,color:#E65100,rounded
+    classDef mcp fill:#E1BEE7,stroke:#8E24AA,color:#4A148C,rounded
+    classDef token fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,rounded
+    classDef svid fill:#D1C4E9,stroke:#673AB7,color:#311B92,rounded
+    classDef rar fill:#E8F5E9,stroke:#388E3C,color:#1B5E20,rounded
+    
+    User(["User"]):::user
+    
+    subgraph HostLayer["Host AI Layer"]
+        HostAI["Travel Planner"]:::hostai
+        HostSVID["SPIFFE ID:<br>spiffe://example.org/workload/host-ai"]:::svid
+        HostToken["Transaction Token:<br>{<br>  sub: 'spiffe://example.org/workload/host-ai',<br>  agent_chain: ['spiffe://example.org/user/alice'],<br>  authorization_details: {<br>    type: 'travel_planning',<br>    constraints: {<br>      budget: '$3000',<br>      dietary: 'no_shellfish'<br>    }<br>  }<br>}"]:::token
+    end
+    
+    subgraph SpecialistLayer["Specialist Agent Layer"]
+        direction LR
+        Flight["Flight Agent"]:::agent
+        Hotel["Hotel Agent"]:::agent
+        Food["Food Agent"]:::agent
+        
+        FlightSVID["SPIFFE ID:<br>spiffe://example.org/workload/flight-agent"]:::svid
+        HotelSVID["SPIFFE ID:<br>spiffe://example.org/workload/hotel-agent"]:::svid
+        FoodSVID["SPIFFE ID:<br>spiffe://example.org/workload/food-agent"]:::svid
+        
+        FlightRAR["Flight RAR:<br>{type: 'flight_only',<br>constraints: {budget: '$1500'}}"]:::rar
+        HotelRAR["Hotel RAR:<br>{type: 'hotel_only',<br>constraints: {budget: '$1000'}}"]:::rar
+        FoodRAR["Food RAR:<br>{type: 'food_only',<br>constraints: {dietary: 'no_shellfish'}}"]:::rar
+        
+        FlightToken["Transaction Token:<br>{<br>  sub: 'spiffe://example.org/workload/flight-agent',<br>  agent_chain: [<br>    'spiffe://example.org/workload/host-ai',<br>    'spiffe://example.org/user/alice'<br>  ],<br>  authorization_details: {<br>    type: 'flight_only',<br>    constraints: {<br>      budget: '$1500'<br>    }<br>  }<br>}"]:::token
+        
+        HotelToken["Transaction Token:<br>{<br>  sub: 'spiffe://example.org/workload/hotel-agent',<br>  agent_chain: [<br>    'spiffe://example.org/workload/host-ai',<br>    'spiffe://example.org/user/alice'<br>  ],<br>  authorization_details: {<br>    type: 'hotel_only',<br>    constraints: {<br>      budget: '$1000'<br>    }<br>  }<br>}"]:::token
+        
+        FoodToken["Transaction Token:<br>{<br>  sub: 'spiffe://example.org/workload/food-agent',<br>  agent_chain: [<br>    'spiffe://example.org/workload/host-ai',<br>    'spiffe://example.org/user/alice'<br>  ],<br>  authorization_details: {<br>    type: 'food_only',<br>    constraints: {<br>      dietary: 'no_shellfish'<br>    }<br>  }<br>}"]:::token
+    end
+    
+    subgraph GatewayLayer["Gateway Layer"]
+        Gateway["MCP Gateway<br>with Policy Engine"]:::gateway
+    end
+    
+    subgraph MCPLayer["MCP Services Layer"]
+        direction LR
+        FlightMCP["Flight MCP"]:::mcp
+        HotelMCP["Hotel MCP"]:::mcp
+        FoodMCP["Food MCP"]:::mcp
+    end
+    
+    User --"1. Request with<br>constraints"--> HostLayer
+    
+    HostLayer --"2. Create specialists<br>with appropriate RARs"--> SpecialistLayer
+    
+    Flight --- FlightSVID
+    Hotel --- HotelSVID
+    Food --- FoodSVID
+    
+    FlightSVID --- FlightToken
+    HotelSVID --- HotelToken
+    FoodSVID --- FoodToken
+    
+    FlightRAR --- FlightToken
+    HotelRAR --- HotelToken
+    FoodRAR --- FoodToken
+    
+    SpecialistLayer --"3. Request with<br>Transaction Tokens"--> GatewayLayer
+    
+    GatewayLayer --"4. Policy-validated<br>access"--> MCPLayer
+    
+    MCPLayer --"5. Constrained<br>results"--> GatewayLayer
+    
+    GatewayLayer --"6. Verified<br>results"--> SpecialistLayer
+    
+    SpecialistLayer --"7. Coordinated<br>results"--> HostLayer
+    
+    HostLayer --"8. Final plan<br>with guarantees"--> User
+    
+    User --- HostSVID
+    HostSVID --- HostToken
+```
+
+<img width="568" alt="image" src="https://github.com/user-attachments/assets/7c847074-d4e7-4b42-b645-1ec60599ca2c" />
+
+<img width="646" alt="image" src="https://github.com/user-attachments/assets/2ad52502-8f59-493b-9d57-b55fd149fe11" />
+
+
+<img width="920" alt="image" src="https://github.com/user-attachments/assets/bf4c7576-ed60-49b7-9f98-8b78cc71148a" />
+
+<img width="849" alt="image" src="https://github.com/user-attachments/assets/1a781197-60e9-435f-aee9-3e719de53ab4" />
