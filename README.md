@@ -425,4 +425,109 @@ flowchart TB
 <img width="1138" alt="image" src="https://github.com/user-attachments/assets/b0ebe38b-2dbd-4e05-a8db-1745b58afa4b" />
 
 
+## diagram8:
+
+```
+flowchart TB
+    classDef user fill:#FFEBEE,stroke:#C62828,color:#B71C1C,rounded
+    classDef agent fill:#E1F5FE,stroke:#0288D1,color:#01579B,rounded
+    classDef oauth fill:#C8E6C9,stroke:#4CAF50,color:#2E7D32,rounded
+    classDef rar fill:#E8F5E9,stroke:#388E3C,color:#1B5E20,rounded
+    classDef specialagent fill:#B3E5FC,stroke:#0288D1,color:#01579B,rounded
+    classDef mcp fill:#E1BEE7,stroke:#8E24AA,color:#4A148C,rounded
+    
+    User(["USER"]):::user
+    TravelAgent["Travel<br>Agent"]:::agent
+    
+    OAuth["OAuth<br>Service"]:::oauth
+    
+    subgraph RARExamples["Rich Authorization Requests (RAR)"]
+        direction TB
+        MainRAR["Travel RAR Token<br>{<br>  type: 'travel_planning',<br>  locations: ['Japan'],<br>  constraints: {<br>    flight_budget: '$1000',<br>    hotel_budget: '$200',<br>    dietary: 'no_shellfish'<br>  }<br>}"]:::rar
+        
+        FlightRAR["Flight RAR Token<br>{<br>  type: 'flight_only',<br>  locations: ['Japan'],<br>  constraints: {<br>    budget: '$1000'<br>  }<br>}"]:::rar
+        
+        HotelRAR["Hotel RAR Token<br>{<br>  type: 'hotel_only',<br>  locations: ['Japan'],<br>  constraints: {<br>    budget: '$200'<br>  }<br>}"]:::rar
+        
+        FoodRAR["Food RAR Token<br>{<br>  type: 'food_only',<br>  locations: ['Japan'],<br>  constraints: {<br>    dietary: 'no_shellfish'<br>  }<br>}"]:::rar
+    end
+    
+    subgraph Specialists["Specialist Agents"]
+        direction LR
+        FlightAgent["Flight<br>Agent"]:::specialagent
+        HotelAgent["Hotel<br>Agent"]:::specialagent
+        FoodAgent["Food<br>Agent"]:::specialagent
+    end
+    
+    User --"1. Request: Japan trip,<br>flight under $1000,<br>hotel under $200,<br>no shellfish"--> TravelAgent
+    
+    TravelAgent --"2. Request RAR<br>with constraints"--> OAuth
+    OAuth --"3. Issues parent RAR<br>with all constraints"--> MainRAR
+    
+    MainRAR --"4. Derives child RAR<br>with flight constraints"--> FlightRAR
+    MainRAR --"5. Derives child RAR<br>with hotel constraints"--> HotelRAR
+    MainRAR --"6. Derives child RAR<br>with food constraints"--> FoodRAR
+    
+    FlightRAR --"7. Scoped authorization<br>with constraints"--> FlightAgent
+    HotelRAR --"8. Scoped authorization<br>with constraints"--> HotelAgent
+    FoodRAR --"9. Scoped authorization<br>with constraints"--> FoodAgent
+```
+
+<img width="821" alt="image" src="https://github.com/user-attachments/assets/4d7076d3-0d0d-4b92-9eae-0a6e20dcae89" />
+
+
+## diagram 9
+
+```
+flowchart TB
+    classDef user fill:#FFEBEE,stroke:#C62828,color:#B71C1C,rounded
+    classDef agent fill:#E1F5FE,stroke:#0288D1,color:#01579B,rounded
+    classDef specialagent fill:#B3E5FC,stroke:#0288D1,color:#01579B,rounded
+    classDef rar fill:#E8F5E9,stroke:#388E3C,color:#1B5E20,rounded
+    classDef svid fill:#D1C4E9,stroke:#673AB7,color:#311B92,rounded
+    classDef txn fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,rounded
+    classDef gateway fill:#FFF3E0,stroke:#E65100,color:#E65100,rounded
+    classDef mcp fill:#E1BEE7,stroke:#8E24AA,color:#4A148C,rounded
+    classDef policy fill:#FFE0B2,stroke:#FF9800,color:#E65100,rounded
+    
+    User(["USER"]):::user
+    TravelAgent["Travel<br>Agent"]:::agent
+    
+    subgraph TokenCreation["Transaction Token Creation"]
+        direction TB
+        FlightRAR["Flight RAR Token<br>{type: 'flight_only',<br>budget: '$1000'}"]:::rar
+        
+        SVID["SPIFFE Workload Identity<br>{<br>  svid: 'spiffe://example/agent/flight',<br>  parent: 'spiffe://example/agent/travel'<br>}"]:::svid
+        
+        TxnToken["Transaction Token (RFC 9068)<br>{<br>  sub: 'spiffe://example/agent/flight',<br>  authorization_details: {<br>    type: 'flight_only',<br>    constraints: {<br>      budget: '$1000'<br>    }<br>  },<br>  agent_chain: [<br>    'spiffe://example/agent/travel'<br>  ]<br>}"]:::txn
+    end
+    
+    FlightAgent["Flight<br>Agent"]:::specialagent
+    
+    Gateway["MCP<br>Gateway"]:::gateway
+    PolicyEngine["OPA Policy<br>Engine"]:::policy
+    FlightMCP["Flight<br>MCP Server"]:::mcp
+    
+    User --"1. Request with constraints"--> TravelAgent
+    TravelAgent --"2. Initiates token<br>creation process"--> TokenCreation
+    
+    FlightRAR --"3. RAR provides<br>constraints"--> TxnToken
+    SVID --"4. SPIFFE provides<br>identity"--> TxnToken
+    
+    TravelAgent --"5. Creates<br>specialist"--> FlightAgent
+    TxnToken --"6. Transaction token with<br>identity + constraints"--> FlightAgent
+    
+    FlightAgent --"7. Request with<br>transaction token"--> Gateway
+    Gateway --"8. Validate<br>token"--> PolicyEngine
+    
+    PolicyEngine --"9. Verify identity<br>& constraints"--> Gateway
+    
+    Gateway --"10. Compliant<br>access"--> FlightMCP
+    FlightMCP --"11. Results<br>(under budget)"--> Gateway
+    Gateway --"12. Verified<br>results"--> FlightAgent
+    FlightAgent --"13. Results"--> TravelAgent
+    TravelAgent --"14. Safe travel plan"--> User
+```
+
+<img width="1039" alt="image" src="https://github.com/user-attachments/assets/f4c85867-355a-4f9f-b1e0-4910c29cfd34" />
 
