@@ -222,5 +222,207 @@ flowchart TD
 <img width="1039" alt="image" src="https://github.com/user-attachments/assets/be21ee87-e03b-452e-97b4-c94fd0bf4a5b" />
 
 
+## Diagram5:
+
+```
+flowchart TB
+    classDef user fill:#FFEBEE,stroke:#C62828,color:#B71C1C,rounded
+    classDef agent fill:#E1F5FE,stroke:#0288D1,color:#01579B,rounded
+    classDef specialagent fill:#B3E5FC,stroke:#0288D1,color:#01579B,rounded
+    classDef mcp fill:#E1BEE7,stroke:#8E24AA,color:#4A148C,rounded
+    classDef oauth fill:#C8E6C9,stroke:#4CAF50,color:#2E7D32,rounded
+    classDef key fill:#FFECB3,stroke:#FFA000,color:#FF6F00,rounded
+    classDef problem fill:#FFCDD2,stroke:#C62828,color:#B71C1C,rounded
+    
+    User(["<b>USER</b>"]):::user
+    TravelAgent["Travel<br>Agent"]:::agent
+    OAuth["OAuth<br>Server"]:::oauth
+    Credentials["Broad Credentials:<br>Generic OAuth token + All API Keys"]:::key
+    
+    subgraph Specialists["Specialist Agents"]
+        direction LR
+        SpecialistAgents["Flight | Hotel | Food"]:::specialagent
+    end
+    
+    subgraph MCP["MCP Servers"]
+        direction LR
+        MCPServers["Flight | Hotel | Restaurant"]:::mcp
+    end
+    
+    subgraph Issues["Security Issues"]
+        direction TB
+        SecurityIssues["⚠️ 1: Embedded credentials in each agent<br>⚠️ 2: No workload identity verification<br>⚠️ 3: No transaction tokens for constraints<br>⚠️ 4: Context lost between agents"]:::problem
+    end
+    
+    User --"1. Request: Japan trip,<br>budget & dietary constraints"--> TravelAgent
+    TravelAgent --"2. Request<br>authorization"--> OAuth
+    OAuth --"3. Generic scope token<br>(no fine-grained control)"--> Credentials
+    TravelAgent --"4. Creates<br>specialists"--> Specialists
+    Credentials --"5. Copy of all credentials<br>(no workload identity)"--> Specialists
+    
+    Specialists --"6. API calls with embedded keys<br>(no transaction tokens)"--> MCP
+    MCP --"7. Results<br>(no constraint enforcement)"--> Specialists
+    Specialists --"8. Return<br>results"--> TravelAgent
+    TravelAgent --"9. Travel plan<br>(constraints only if<br>agent remembers)"--> User
+    
+    Credentials -.-> Issues
+    
+    style User font-size:18px
+```
+<img width="1127" alt="image" src="https://github.com/user-attachments/assets/8162093c-27f8-4653-a12f-6ca361c44a65" />
+
+
+## Diagram6:
+
+```
+flowchart TB
+    classDef user fill:#FFEBEE,stroke:#C62828,color:#B71C1C,rounded
+    classDef agent fill:#E1F5FE,stroke:#0288D1,color:#01579B,rounded
+    classDef specialagent fill:#B3E5FC,stroke:#0288D1,color:#01579B,rounded
+    classDef mcp fill:#E1BEE7,stroke:#8E24AA,color:#4A148C,rounded
+    classDef oauth fill:#C8E6C9,stroke:#4CAF50,color:#2E7D32,rounded
+    classDef rar fill:#E8F5E9,stroke:#388E3C,color:#1B5E20,rounded
+    classDef txn fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,rounded
+    classDef svid fill:#D1C4E9,stroke:#673AB7,color:#311B92,rounded
+    classDef gateway fill:#FFF3E0,stroke:#E65100,color:#E65100,rounded
+    classDef solution fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20,rounded
+    
+    User(["<b>USER</b>"]):::user
+    TravelAgent["Travel<br>Agent"]:::agent
+    
+    subgraph Security["Security Services"]
+        direction LR
+        RARService["RAR<br>Service"]:::oauth
+        SPIFFEService["SPIFFE<br>Service"]:::svid
+        TxnService["Transaction<br>Token Service"]:::txn
+    end
+    
+    subgraph Tokens["Fine-Grained Authorization"]
+        direction TB
+        RARToken["Resource Access Rights (RAR):<br>{flight: under $1000, hotel: under $200,<br>food: no shellfish}"]:::rar
+        SVID["SPIFFE Verifiable Identity<br>(workload identity)"]:::svid
+        TransactionToken["Transaction Tokens:<br>Combined RAR constraints + SVID identity<br>for secure, scoped access"]:::txn
+    end
+    
+    subgraph Specialists["Specialist Agents"]
+        direction LR
+        SpecialistAgents["Flight | Hotel | Food"]:::specialagent
+    end
+    
+    Gateway["MCP<br>Gateway"]:::gateway
+    
+    subgraph MCP["MCP Servers"]
+        direction LR
+        MCPServers["Flight | Hotel | Restaurant"]:::mcp
+    end
+    
+    subgraph Solutions["Security Solutions"]
+        direction TB
+        SecuritySolutions["✅ 1: No embedded credentials in agents<br>✅ 2: SPIFFE workload identity verification<br>✅ 3: Transaction tokens enforce constraints<br>✅ 4: Context preserved across agents"]:::solution
+    end
+    
+    User --"1. Request: Japan trip,<br>budget & dietary constraints"--> TravelAgent
+    TravelAgent --"2. Request fine-grained<br>authorization"--> RARService
+    
+    RARService --"3. Issues RAR with<br>specific constraints"--> RARToken
+    TravelAgent --"4. Creates<br>specialists"--> Specialists
+    
+    Specialists --"5. Request workload<br>identity"--> SPIFFEService
+    SPIFFEService --"6. Issues SVID<br>for each agent"--> SVID
+    
+    RARToken --"7a. Constraints<br>input"--> TxnService
+    SVID --"7b. Identity<br>input"--> TxnService
+    
+    TxnService --"8. Issues tokens combining<br>identity and constraints"--> TransactionToken
+    
+    TransactionToken --"9. Secure, scoped<br>access rights"--> Specialists
+    
+    Specialists --"10. MCP request with<br>transaction token<br>(SVID+RAR combined)"--> Gateway
+    
+    Gateway --"11. Validates constraints,<br>verifies workload identity,<br>enforces limitations"--> MCP
+    
+    MCP --"12. Constraint-compliant<br>results (under budget,<br>no shellfish)"--> Gateway
+    
+    Gateway --"13. Verified<br>results"--> Specialists
+    Specialists --"14. Secure<br>results"--> TravelAgent
+    
+    TravelAgent --"15. Safe travel plan<br>(all constraints guaranteed)"--> User
+    
+    TransactionToken -.-> Solutions
+    
+    style User font-size:18px
+```
+
+<img width="1007" alt="image" src="https://github.com/user-attachments/assets/00a416f4-81d5-49c2-88d3-b101ea57b666" />
+
+
+## diagram7:
+
+```
+flowchart TB
+    classDef user fill:#FFEBEE,stroke:#C62828,color:#B71C1C,rounded
+    classDef agent fill:#E1F5FE,stroke:#0288D1,color:#01579B,rounded
+    classDef specialagent fill:#B3E5FC,stroke:#0288D1,color:#01579B,rounded
+    classDef mcp fill:#E1BEE7,stroke:#8E24AA,color:#4A148C,rounded
+    classDef security fill:#C8E6C9,stroke:#4CAF50,color:#2E7D32,rounded
+    classDef token fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,rounded
+    classDef gateway fill:#FFF3E0,stroke:#E65100,color:#E65100,rounded
+    classDef solution fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20,rounded
+    classDef policy fill:#FFE0B2,stroke:#FF9800,color:#E65100,rounded
+    
+    User(["<b>USER</b>"]):::user
+    TravelAgent["Travel<br>Agent"]:::agent
+    
+    SecurityServices["Security Services:<br>RAR (RFC 9521) + SPIFFE"]:::security
+    
+    TransactionToken["Transaction Token (RFC 9068):<br>Constraints + Workload Identity"]:::token
+    
+    subgraph Specialists["Specialist Agents"]
+        direction LR
+        SpecialistAgents["Flight | Hotel | Food"]:::specialagent
+    end
+    
+    Gateway["MCP<br>Gateway"]:::gateway
+    
+    PolicyEngine["OPA Policy<br>Engine"]:::policy
+    
+    subgraph MCP["MCP Servers"]
+        direction LR
+        MCPServers["Flight | Hotel | Restaurant"]:::mcp
+    end
+    
+    subgraph Solutions["Security Solutions"]
+        direction TB
+        SecuritySolutions["✅ 1: No embedded credentials<br>✅ 2: SPIFFE workload identity<br>✅ 3: Enforced constraints via Transaction Tokens<br>✅ 4: Preserved context across services"]:::solution
+    end
+    
+    User --"1. Request with<br>constraints"--> TravelAgent
+    TravelAgent --"2. Request<br>authorization"--> SecurityServices
+    SecurityServices --"3. Issues Transaction Tokens<br>with constraints + identity"--> TransactionToken
+    TravelAgent --"4. Creates<br>specialists"--> Specialists
+    
+    TransactionToken --"5. Secure, scoped<br>access rights"--> Specialists
+    
+    Specialists --"6. Requests with<br>Transaction Tokens"--> Gateway
+    
+    Gateway --"7. Policy check"--> PolicyEngine
+    PolicyEngine --"Policy-based access evaluation:<br>RAR + Workload Identity + Agent Hops"--> Gateway
+    
+    Gateway --"8. Compliant<br>access"--> MCP
+    
+    MCP --"9. Compliant<br>results"--> Gateway
+    
+    Gateway --"10. Verified<br>results"--> Specialists
+    Specialists --"11. Secure<br>results"--> TravelAgent
+    
+    TravelAgent --"12. Safe travel plan<br>(policy-enforced constraints)"--> User
+    
+    TransactionToken -.-> Solutions
+    
+    style User font-size:18px
+```
+
+<img width="1138" alt="image" src="https://github.com/user-attachments/assets/b0ebe38b-2dbd-4e05-a8db-1745b58afa4b" />
+
 
 
